@@ -12,13 +12,12 @@ module RSS where
   type RssData = [RssEntry]
   -- Types containing data on RSS feeds
   type RssSources = [String]
-  getStories :: IO [RssData] -> IO RssData
-  getStories = liftM concat
-  displayFeeds :: IO [RssData] -> IO String
-  displayFeeds dat = liftM (concat . map prettyRss) dat
-  -- | Takes a list of RSS.xml feeds, and outputs an array of RssData objects containing the information from each RSS.xml
-  fetchFeeds :: RssSources -> IO [RssData]
-  fetchFeeds srcs = sequence $ map (\src -> getRssData src >>= return . parseRssData) srcs
+  getStories :: RssSources -> [IO RssData]
+  getStories = undefined
+  displayFeeds :: [IO RssData] -> IO String
+  displayFeeds dat = msum $ map (\x -> trace (show x) (liftM $ prettyRss x)) dat
+  fetchFeeds :: RssSources -> [IO RssData]
+  fetchFeeds srcs = map (\src -> getRssData src >>= return . parseRssData) srcs
   getRssData :: String -> IO [Content]
   getRssData src = do
     xmldat <- simpleHTTP (getRequest src) >>= getResponseBody
