@@ -14,10 +14,10 @@ module RSS where
   type RssSources = [String]
   getStories :: RssSources -> [IO RssData]
   getStories = undefined
-  displayFeeds :: [IO RssData] -> IO String
-  displayFeeds dat = msum $ map (\x -> trace (show x) (liftM $ prettyRss x)) dat
-  fetchFeeds :: RssSources -> [IO RssData]
-  fetchFeeds srcs = map (\src -> getRssData src >>= return . parseRssData) srcs
+  displayFeeds :: IO [RssData] -> IO String
+  displayFeeds dat = liftM (concat . map prettyRss) dat
+  fetchFeeds :: RssSources -> IO [RssData]
+  fetchFeeds srcs = sequence $ map (\src -> getRssData src >>= return . parseRssData) srcs
   getRssData :: String -> IO [Content]
   getRssData src = do
     xmldat <- simpleHTTP (getRequest src) >>= getResponseBody
