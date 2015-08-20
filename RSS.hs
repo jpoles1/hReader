@@ -3,12 +3,10 @@ module RSS where
   import Data.List
   import Text.XML.Light
   import Control.Monad
-  import Debug.Trace
-  import qualified Data.ByteString.Lazy.Char8 as L
   -- Types containing data on individual RSS entries
   data RssEntry = RssEntry {guid :: Maybe String, title:: Maybe String, link :: Maybe String}
   instance Show RssEntry where
-    show x =  "Title: " ++ (show . guid $ x) ++ "\nGUID: " ++ (show . title $ x) ++ "\nLink : " ++ (show . link $ x)
+    show x =  "Title: " ++ (show . title $ x) ++ "\nGUID: " ++ (show . guid $ x) ++ "\nLink : " ++ (show . link $ x)
   type RssData = [RssEntry]
   -- Types containing data on RSS feeds
   type RssSources = [String]
