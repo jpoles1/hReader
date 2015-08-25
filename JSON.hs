@@ -1,12 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
 module JSON where
   import Data.Aeson
   import Control.Applicative
   import qualified Data.ByteString.Lazy as B
-  import GHC.Generics
-  data Configuration = Configuration {debug :: Bool, sources :: [String]} deriving (Show, Generic)
-  instance FromJSON Configuration
-  instance ToJSON Configuration
+  import ReaderTypes
   getConfig :: FilePath -> IO Configuration
   getConfig path = do
      -- Get JSON data and decode it

@@ -1,33 +1,36 @@
-{-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables, DeriveGeneric #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables, DeriveGeneric #-}
 module Main where
   import Control.Applicative ((<$>), optional)
   import Control.Concurrent
+  import Control.Monad.IO.Class
+  import Control.Monad (msum)
   import Data.Maybe (fromMaybe)
   import Data.Text (Text)
   import Data.Text.Lazy (unpack)
-  import Happstack.Lite
-  import Text.Blaze.Html5 (Html, (!), a, form, input, p, toHtml, label)
-  import Text.Blaze.Html5.Attributes (action, enctype, href, name, size, type_, value)
-  import qualified Text.Blaze.Html5 as H
-  import qualified Text.Blaze.Html5.Attributes as A
+  import Happstack.Server
   import JSON
   import RSS
-  rssSources = ["http://xkcd.com/rss.xml", "http://www.smbc-comics.com/rss.php"] :: RssSources
+  import ReaderTypes
   main :: IO ()
   main = do
-    putStrLn "RSS Server Started"
-    servtid <- forkIO startServer
-    print servtid
+    putStrLn "RSS Server Started" >> startServer
+  serverConfig :: Conf
+  serverConfig = Conf {port = 8000, validator = Nothing, logAccess = Just logMAccess, timeout = 30, threadGroup = Nothing}
   startServer :: IO ()
-  startServer = do
-    sources <- getSources "settings.json"
-    rss <- displayFeeds $ fetchFeeds sources
-    serve Nothing $ myApp rss
-  myApp :: String -> ServerPart Response
-  myApp fetchedRss = msum [dir "static" $ serveIndex, dir "fetchRSS" $ loadData fetchedRss, serveIndex]
-  serveIndex :: ServerPart Response
+  startServer = simpleHTTP serverConfig $ myApp
+  myApp :: ServerPartT IO Response
+  myApp = msum [dir "static" $ serveIndex, dir "fetchRSS" $ path serveSortedRss, dir "fetchRSS" $ serveRss, serveIndex]
+  serveIndex :: ServerPartT IO Response
   serveIndex = serveDirectory EnableBrowsing ["index.html"] "static"
-  loadData :: String -> ServerPart Response
-  loadData str = ok $ toResponse (str)
-  restartServer :: ThreadId -> IO()
-  restartServer tid = killThread tid
+  serveRss :: ServerPartT IO Response
+  serveRss = do
+    sources <- liftIO $ getSources "settings.json"
+    feed <- liftIO $ getStoriesByFeed sources
+    ok $ Response {rsCode=200, rsFlags=nullRsFlags, rsBody = feed, rsValidator = Nothing, rsHeaders=(mkHeaders [("Content-Type","text/JSON")])}
+  serveSortedRss :: String -> ServerPartT IO Response
+  serveSortedRss sorttype = do
+    sources <- liftIO $ getSources "settings.json"
+    feed <- liftIO (fetchFeeds sources >>= (sortRss $ SortFeed ByTitle Ascend))
+    ok $ Response {rsCode=200, rsFlags=nullRsFlags, rsBody = feed, rsValidator = Nothing, rsHeaders=(mkHeaders [("Content-Type","text/JSON")])}
+  serveString :: String -> ServerPart Response
+  serveString str = ok $ toResponse (str)
